@@ -336,6 +336,35 @@ mod tests {
     }
 
     #[test]
+    fn parse_single_frame() {
+        let frame = r#":comment
+
+        data: YHOO
+        data: +2
+        data: 10
+
+        "#;
+
+        let mut parser = super::EventParser::default();
+        let mut results = Vec::new();
+
+        parser.push_bytes(Vec::from(frame));
+
+        while let Some(event) = parser.next() {
+            results.push(EventString::from(event.unwrap()));
+        }
+
+        assert_eq!(
+            results,
+            vec![EventString {
+                event: EventType::State,
+                id: "".to_string(),
+                data: "YHOO+210".to_string()
+            },]
+        )
+    }
+
+    #[test]
     fn filter_notification() {
         let state_change_block =
             "event: state\ndata: {\"@type\": \"StateChange\",\"changed\":{}}\n\n";
