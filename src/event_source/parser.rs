@@ -227,6 +227,13 @@ impl Iterator for EventParser {
 #[cfg(test)]
 mod tests {
 
+    use ahash::AHashMap;
+
+    use crate::{
+        event_source::{Changes, PushNotification},
+        CalendarAlert,
+    };
+
     use super::{Event, EventType};
 
     #[derive(Debug, PartialEq, Eq)]
@@ -324,6 +331,47 @@ mod tests {
                     id: "".to_string(),
                     data: "world".to_string()
                 }
+            ]
+        );
+    }
+
+    #[test]
+    fn filter_notification() {
+        let state_change_block =
+            "event: state\ndata: {\"@type\": \"StateChange\",\"changed\":{}}\n\n";
+        let calendar_alert_block = "event: calendarAlert\ndata: {\"@type\": \"CalendarAlert\",\"accountId\": \"test\", \"calendarEventId\": \"test\", \"uid\": \"test\", \"alertId\": \"test\"}\n\n";
+        let comment_block = ": comment\n\n";
+
+        let mut parser = super::EventParser::default();
+        let mut results = Vec::new();
+
+        for frame in [
+            Vec::from(state_change_block),
+            Vec::from(calendar_alert_block),
+            Vec::from(comment_block),
+        ] {
+            parser.push_bytes(frame);
+
+            #[allow(clippy::while_let_on_iterator)]
+            while let Some(event) = parser.filter_notification() {
+                results.push(event.unwrap());
+            }
+        }
+
+        assert_eq!(
+            results,
+            vec![
+                PushNotification::StateChange(Changes {
+                    id: None,
+                    changes: AHashMap::new(),
+                },),
+                PushNotification::CalendarAlert(CalendarAlert {
+                    account_id: "test".into(),
+                    calendar_event_id: "test".into(),
+                    uid: "test".into(),
+                    recurrence_id: None,
+                    alert_id: "test".into(),
+                },),
             ]
         );
     }
