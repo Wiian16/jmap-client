@@ -143,6 +143,11 @@ impl Iterator for EventParser {
                     }
                     b'\r' | b' ' => (),
                     b'\n' => {
+                        if self.result.data.is_empty() {
+                            self.result.event = EventType::default();
+                            continue;
+                        }
+
                         return Some(Ok(std::mem::take(&mut self.result)));
                     }
                     _ => {
@@ -295,11 +300,6 @@ mod tests {
                     event: EventType::Ping,
                     id: "123".to_string(),
                     data: "ping payload".to_string()
-                },
-                EventString {
-                    event: EventType::State,
-                    id: "".to_string(),
-                    data: "".to_string()
                 },
                 EventString {
                     event: EventType::State,
